@@ -1,0 +1,29 @@
+#cloud-config
+packages:
+- docker-engine
+write_files:
+- content: |
+      [Unit]
+      Description=Mongo DB
+      Requires=docker.service
+      [Service]
+      ExecStartPre=/bin/sleep 1
+      ExecStartPre=/bin/docker pull mongo
+      ExecStart=/bin/docker run --restart=always -p 27017:27017 --name mongo mongo
+      ExecStop=/bin/docker stop mongo
+      ExecStopPost=/bin/docker rm -f mongo
+      ExecReload=/bin/docker restart mongo
+      [Install]
+      WantedBy=multi-user.target
+  path: /etc/systemd/system/mongo.service
+  owner: root:root
+  permissions: '0755'
+runcmd:
+- systemctl enable docker
+- systemctl start docker
+- systemctl enable mongo
+- systemctl start mongo
+- firewall-offline-cmd --zone=public --add-port=27017/tcp
+- systemctl reload firewalld
+
+output: { all: '| tee -a /var/log/cloud-init-output.log' }

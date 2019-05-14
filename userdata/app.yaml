@@ -1,0 +1,29 @@
+#cloud-config
+packages:
+- docker-engine
+write_files:
+- content: |
+      [Unit]
+      Description=Hitcount application
+      Requires=docker.service
+      [Service]
+      ExecStartPre=/bin/sleep 1
+      ExecStartPre=/bin/docker pull gregvers/hitcount
+      ExecStart=/bin/docker run --restart=always --name=hitcount --hostname=%H -e MONGODB_SERVICE_HOST=db.dbsubnet.hitcountvcn.oraclevcn.com -e MONGODB_SERVICE_PORT=27017 -p 8080:3000 gregvers/hitcount
+      ExecStop=/bin/docker stop hitcount
+      ExecStopPost=/bin/docker rm -f hitcount
+      ExecReload=/bin/docker restart hitcount
+      [Install]
+      WantedBy=multi-user.target
+  path: /etc/systemd/system/hitcount.service
+  owner: root:root
+  permissions: '0755'
+runcmd:
+- systemctl enable docker
+- systemctl start docker
+- systemctl enable hitcount
+- systemctl start hitcount
+- firewall-offline-cmd --zone=public --add-port=8080/tcp
+- systemctl reload firewalld
+
+output: { all: '| tee -a /var/log/cloud-init-output.log' }
